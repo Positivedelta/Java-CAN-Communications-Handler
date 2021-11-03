@@ -6,7 +6,7 @@
     <property name="dist" location="."/>
     <property name="native-headers" location="include"/>
     <property name="jarname-no-log4j" value="can-message-handler-v1.0.jar"/>
-    <property name="jarname-with-log4j" value="can-message-heandler-inc-log4j-v1.0.jar"/>
+    <property name="jarname-with-log4j" value="can-message-handler-inc-log4j-v1.0.jar"/>
 
     <target name="init">
         <tstamp/>
