@@ -1,0 +1,93 @@
+<project name="Build the CAN Comms Handler" default="jar" basedir=".">
+    <description>Build the native CanCommsHandler JAR file</description>
+
+    <property name="src" location="src"/>
+    <property name="build" location="build"/>
+    <property name="dist" location="."/>
+    <property name="native-headers" location="include"/>
+    <property name="jarname-no-log4j" value="can-message-handler-v1.0.jar"/>
+    <property name="jarname-with-log4j" value="can-message-heandler-inc-log4j-v1.0.jar"/>
+
+    <target name="init">
+        <tstamp/>
+        <mkdir dir="${build}"/>
+    </target>
+
+    <target name="tidy" description="Clean up, but leave the JAR file">
+        <delete dir="${build}"/>
+    </target>
+
+    <target name="clean" description="Clean up">
+        <delete dir="${build}"/>
+        <delete file="${dist}/${jarname-no-log4j}"/>
+        <delete file="${dist}/${jarname-with-log4j}"/>
+    </target>
+
+    <target name="compile" depends="clean,init" description="Compile source files">
+        <javac includeantruntime="false" srcdir="${src}" destdir="${build}" nativeheaderdir="${native-headers}">
+            <compilerarg value="-version"/>
+            <classpath>
+                <fileset dir="lib">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+        </javac>
+    </target>
+
+    <!-- does NOT include log4j support in the jar file -->
+    <!-- -->
+    <target name="jar" depends="compile" description="Build the JAR file, does NOT include log4j support">
+        <jar jarfile="${dist}/${jarname-no-log4j}">
+            <fileset dir="${build}">
+                <include name="bitparallel/communication/CanCommsHandler.class"/>
+                <include name="bitparallel/communication/CanMessage.class"/>
+                <include name="bitparallel/communication/CanFilter.class"/>
+                <include name="bitparallel/communication/CanMessageListener.class"/>
+            </fileset>
+
+            <!-- file name="libcan_comms_handler_linux_arm32.so"/ -->
+            <file name="libcan_comms_handler_linux_arm64.so"/>
+
+            <manifest>
+                <attribute name="Multi-Release" value="true"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- includes log4j support in the jar file -->
+    <!-- -->
+    <target name="jar-log4j" depends="compile" description="Build the JAR file, includes log4j support">
+        <jar jarfile="${dist}/${jarname-with-log4j}">
+            <fileset dir="${build}">
+                <include name="bitparallel/communication/CanCommsHandler.class"/>
+                <include name="bitparallel/communication/CanMessage.class"/>
+                <include name="bitparallel/communication/CanFilter.class"/>
+                <include name="bitparallel/communication/CanMessageListener.class"/>
+            </fileset>
+
+            <!-- file name="libcan_comms_handler_linux_arm32.so"/ -->
+            <file name="libcan_comms_handler_linux_arm64.so"/>
+
+            <zipgroupfileset dir="lib" includes="**/*.jar"/>
+            <file name="${dist}/log4j2.xml"/>
+
+            <manifest>
+                <attribute name="Multi-Release" value="true"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="test" depends="jar-log4j" description="Build and test the JAR (includes log4j support)">
+        <input message="Please enter a device name:" addproperty="devicename"/>
+        <java classname="bitparallel.tests.CanCommsHandlerTest" fork="true">
+            <classpath>
+                <pathelement location="${dist}/${jarname-with-log4j}"/>
+
+                <!-- this is included to pickup the test class, everything else is in the jar -->
+                <!-- -->
+                <pathelement path="${build}"/>
+            </classpath>
+            <arg value="${devicename}"/>
+        </java>
+    </target>
+</project>
