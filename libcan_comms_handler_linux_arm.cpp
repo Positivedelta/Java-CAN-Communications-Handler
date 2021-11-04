@@ -50,7 +50,15 @@ extern "C"
         //
         ifreq ifRequest;
         strcpy(ifRequest.ifr_name, cppDevice.c_str());
-        ioctl(static_cast<int32_t>(deviceFd), SIOCGIFINDEX, &ifRequest);
+        if (ioctl(static_cast<int32_t>(deviceFd), SIOCGIFINDEX, &ifRequest) == -1)
+        {
+            std::stringstream errMsg;
+            errMsg << "Unable to obtain the CAN socket details for device " << cppDevice << ", native ERRNO: " << errno;
+
+            const jclass jEx = env->FindClass("java/io/IOException");
+            env->ThrowNew(jEx, errMsg.str().c_str());
+            return -1;
+        }
 
         // bind the CAN socket
         //
@@ -61,7 +69,7 @@ extern "C"
         if (bind(static_cast<int32_t>(deviceFd), (sockaddr*)&socketCan, sizeof(socketCan)) < 0)
         {
             std::stringstream errMsg;
-            errMsg << "Unable to bind the CAN socket to device " << cppDevice;
+            errMsg << "Unable to bind the CAN socket to device " << cppDevice << ", native ERRNO: " << errno;
 
             const jclass jEx = env->FindClass("java/io/IOException");
             env->ThrowNew(jEx, errMsg.str().c_str());

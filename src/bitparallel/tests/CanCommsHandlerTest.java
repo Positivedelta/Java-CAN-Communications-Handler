@@ -49,22 +49,19 @@ public class CanCommsHandlerTest implements CanMessageListener
 
     public final void rxedCanMessage(final CanMessage message)
     {
-        final byte[] data = message.getPayload();
-        logger.info("     Id: " + String.format("%02x", message.getId()) + ", Length: " + data.length);
-
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < data.length; i++)
-        {
-            sb.append(", ");
-            sb.append(String.format("%02x", data[i]));
-        }
-
-        logger.info("Payload: " + sb.toString().substring(1));
+        logger.info(message.toString());
     }
 
-    public static final void main(String[] args) throws IOException
+    public static final void main(String[] args)
     {
-        final String device = args[0];
-        final CanCommsHandlerTest test = new CanCommsHandlerTest(device);
+        try
+        {
+            final String device = args[0];
+            final CanCommsHandlerTest test = new CanCommsHandlerTest(device);
+        }
+        catch (final IOException ex)
+        {
+            logger.error("Unable to complete test, reason: " + ex.getMessage());
+        }
     }
 }
