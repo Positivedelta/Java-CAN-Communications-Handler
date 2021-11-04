@@ -18,6 +18,14 @@
 
 extern "C"
 {
+    // used in transmit()
+    //
+    union CanFrame
+    {
+        can_frame frame;
+        uint8_t bytes[sizeof(can_frame)];
+    };
+
     JNIEXPORT jlong JNICALL Java_bitparallel_communication_CanCommsHandler_nativeOpen(JNIEnv* env, jobject self, jstring device, jobjectArray filters)
     {
         // convert the java strings to C++ strings
@@ -90,22 +98,32 @@ extern "C"
         const jmethodID getPayloadId = env->GetMethodID(messageClass, "getPayload", "()[B");
         const jbyteArray payload = reinterpret_cast<jbyteArray>(env->CallObjectMethod(message, getPayloadId));
 
-        can_frame frame;
-        frame.can_id = env->CallIntMethod(message, getIdId);
-        frame.can_dlc = env->GetArrayLength(payload);
-        env->GetByteArrayRegion(payload, 0, frame.can_dlc, reinterpret_cast<jbyte*>(frame.data));
+        CanFrame msg;
+        msg.frame.can_id = env->CallIntMethod(message, getIdId);
+        msg.frame.can_dlc = env->GetArrayLength(payload);
+        env->GetByteArrayRegion(payload, 0, msg.frame.can_dlc, reinterpret_cast<jbyte*>(msg.frame.data));
 
-        // FIXME! check to see if all of the message bytes get written
-        //        not sure how to handle this, investigate... use ioctl with SIOCOUTQ to query the buffer etc?
+        // make sure that all of the message bytes get written
         //
-        int32_t bytesWritten = write(static_cast<int32_t>(deviceFd), &frame, sizeof(can_frame));
-        if (bytesWritten < 0)
+        int32_t txedBytes, i = 0, size = sizeof(CanFrame);
+        while ((size > 0) && (txedBytes = write(static_cast<int32_t>(deviceFd), &msg.bytes[i], size)) != size)
         {
-            std::stringstream errMsg;
-            errMsg << "Error writing CAN message bytes, status: " << bytesWritten;
+            if (txedBytes < 0)
+            {
+                // note, EAGAIN and EWOULDBLOCK often have the same value, but not guaranteed, so check both
+                //
+                if ((errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) continue;
 
-            const jclass jEx = env->FindClass("java/io/IOException");
-            env->ThrowNew(jEx, errMsg.str().c_str());
+                std::stringstream errMsg;
+                errMsg << "Error writing CAN message bytes, native EERNO: " << errno;
+
+                const jclass jEx = env->FindClass("java/io/IOException");
+                env->ThrowNew(jEx, errMsg.str().c_str());
+                break;
+            }
+
+            size -= txedBytes;
+            i += txedBytes;
         }
     }
 

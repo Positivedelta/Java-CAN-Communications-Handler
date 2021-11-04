@@ -36,7 +36,10 @@
 
     <!-- does NOT include log4j support in the jar file -->
     <!-- -->
-    <target name="jar" depends="compile" description="Build the JAR file, does NOT include log4j support">
+    <target name="jar" depends="compile,do-jar" description="Build the JAR file, does NOT include log4j support">
+    </target>
+
+    <target name="do-jar">
         <jar jarfile="${dist}/${jarname-no-log4j}">
             <fileset dir="${build}">
                 <include name="bitparallel/communication/CanCommsHandler.class"/>
@@ -56,7 +59,10 @@
 
     <!-- includes log4j support in the jar file -->
     <!-- -->
-    <target name="jar-log4j" depends="compile" description="Build the JAR file, includes log4j support">
+    <target name="jar-log4j" depends="compile,do-jar-log4j" description="Build the JAR file, includes log4j support">
+    </target>
+
+    <target name="do-jar-log4j">
         <jar jarfile="${dist}/${jarname-with-log4j}">
             <fileset dir="${build}">
                 <include name="bitparallel/communication/CanCommsHandler.class"/>
@@ -75,6 +81,9 @@
                 <attribute name="Multi-Release" value="true"/>
             </manifest>
         </jar>
+    </target>
+
+    <target name="jar-all" depends="compile,do-jar,do-jar-log4j" description="Build two JAR files, with and without log4j support">
     </target>
 
     <target name="test" depends="jar-log4j" description="Build and test the JAR (includes log4j support)">
