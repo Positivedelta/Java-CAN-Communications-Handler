@@ -13,8 +13,9 @@ import bitparallel.communication.CanCommsHandler;
 import bitparallel.communication.CanFilter;
 import bitparallel.communication.CanMessage;
 import bitparallel.communication.CanMessageListener;
+import bitparallel.communication.CanReadErrorListener;
 
-public class CanCommsHandlerTest implements CanMessageListener
+public class CanCommsHandlerTest implements CanMessageListener, CanReadErrorListener
 {
     private static final Logger logger = LogManager.getLogger(CanCommsHandlerTest.class);
 
@@ -24,10 +25,12 @@ public class CanCommsHandlerTest implements CanMessageListener
 
         final CanFilter[] filters = new CanFilter[0];
         final CanCommsHandler handler = new CanCommsHandler(device, filters);
-        handler.addListener(this);
+        handler.addMessageListener(this);
+        handler.addReadErrorListener(this);
         handler.start();
 
-        // note, when testing with a linux client consider using "candump -L can0" or equivelent to see this message
+        // notes 1, when testing with a linux client consider using "candump -L can0" or equivelent to see this message
+        //       2, transmit() throws an IOException if it fails, if this happens it is likely that the handler will need restarting
         //
         final CanMessage message = new CanMessage(0x200, new byte[] {(byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6, (byte)7, (byte)8});
         handler.transmit(message);
@@ -38,18 +41,34 @@ public class CanCommsHandlerTest implements CanMessageListener
                 Thread.sleep(15000);
                 handler.stop();
             }
-            catch (final Exception ex)
+            catch (final InterruptedException ignored)
             {
-                logger.error("Unexpected exception, reason: " + ex.getMessage(), ex);
             }
         });
 
         t.start();
     }
 
+    //
+    // method required by the CanMessageListener interface
+    //
+
     public final void rxedCanMessage(final CanMessage message)
     {
         logger.info(message.toString());
+    }
+
+    //
+    // method required by the CanErrorListener interface
+    //
+
+    public final void notifyReadError(final Exception ex)
+    {
+        // notes 1, this method is intended be used to stop and restart the handler
+        //       2, the native and java threads associated with the async reads will have been signalled to exit
+        //
+        logger.error("The CAN bus handler has reported a native read exception");
+        logger.error(ex.getMessage());
     }
 
     public static final void main(String[] args)

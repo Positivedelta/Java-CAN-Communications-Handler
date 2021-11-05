@@ -40,9 +40,10 @@ extern "C"
         const jlong deviceFd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (deviceFd < 0)
         {
-            const std::string errMsg = "Unable to create the unbound CAN socket";
+            std::stringstream errMsg;
+            errMsg << "Unable to create the unbound CAN socket, native ERRNO: " << errno;
             const jclass jEx = env->FindClass("java/io/IOException");
-            env->ThrowNew(jEx, errMsg.c_str());
+            env->ThrowNew(jEx, errMsg.str().c_str());
             return -1;
         }
 
@@ -50,7 +51,7 @@ extern "C"
         //
         ifreq ifRequest;
         strcpy(ifRequest.ifr_name, cppDevice.c_str());
-        if (ioctl(static_cast<int32_t>(deviceFd), SIOCGIFINDEX, &ifRequest) == -1)
+        if (ioctl(static_cast<int32_t>(deviceFd), SIOCGIFINDEX, &ifRequest) < 0)
         {
             std::stringstream errMsg;
             errMsg << "Unable to obtain the CAN socket details for device " << cppDevice << ", native ERRNO: " << errno;
@@ -93,7 +94,15 @@ extern "C"
                 cppFilters[i].can_id = env->CallIntMethod(filter, getFilterId);
             }
 
-            setsockopt(static_cast<int32_t>(deviceFd), SOL_CAN_RAW, CAN_RAW_FILTER, cppFilters, length);
+            if (setsockopt(static_cast<int32_t>(deviceFd), SOL_CAN_RAW, CAN_RAW_FILTER, cppFilters, length) < 0)
+            {
+                std::stringstream errMsg;
+                errMsg << "Unable to apply the CAN socket filters to device " << cppDevice << ", native ERRNO: " << errno;
+
+                const jclass jEx = env->FindClass("java/io/IOException");
+                env->ThrowNew(jEx, errMsg.str().c_str());
+                return -1;
+            }
         }
 
         return deviceFd;
@@ -135,7 +144,7 @@ extern "C"
         }
     }
 
-    JNIEXPORT void JNICALL Java_bitparallel_communication_CanCommsHandler_nativeReceiveTask(JNIEnv* env, jobject self, jobject rxQueue, jobject running, jobject stopListener, jlong deviceFd)
+    JNIEXPORT void JNICALL Java_bitparallel_communication_CanCommsHandler_nativeReceiveTask(JNIEnv* env, jobject self, jobject rxQueue, jobject running, jlong deviceFd)
     {
         // allows an oppertunity for the thread to exit every 100ms
         //
@@ -151,9 +160,12 @@ extern "C"
         const jclass selfClass = env->GetObjectClass(self);
         const jobject logger = env->GetStaticObjectField(selfClass, env->GetStaticFieldID(selfClass, "logger", "Lorg/apache/logging/log4j/Logger;"));
         const jclass loggerClass = env->GetObjectClass(logger);
-        const jmethodID infoId = env->GetMethodID(loggerClass, "info", "(Ljava/lang/String;)V");
         const jmethodID warnId = env->GetMethodID(loggerClass, "warn", "(Ljava/lang/String;)V");
         const jmethodID errorId = env->GetMethodID(loggerClass, "error", "(Ljava/lang/String;)V");
+
+        // used to report CAN read errors
+        //
+        const jmethodID errorCallbackId = env->GetMethodID(selfClass, "nativeReadErrorHandler", "(I)V");
 
         // used when creating CanMessage instances and the adding them to the rxQueue by invoking offer()
         //
@@ -161,11 +173,9 @@ extern "C"
         const jclass canMessageClass = env->FindClass("bitparallel/communication/CanMessage");
         const jmethodID canMessageConstructorId = env->GetMethodID(canMessageClass, "<init>", "(I[B)V");
 
-        // to get() and set() the provided AtomicBoolean instance
+        // to access running.get() from the provided AtomicBoolean instance
         //
-        const jclass atomicBooleanClass = env->GetObjectClass(running);
-        const jmethodID getId = env->GetMethodID(atomicBooleanClass, "get", "()Z");
-        const jmethodID setId = env->GetMethodID(atomicBooleanClass, "set", "(Z)V");
+        const jmethodID getId = env->GetMethodID(env->GetObjectClass(running), "get", "()Z");
         while (env->CallBooleanMethod(running, getId))
         {
             FD_ZERO(&readFdSet);
@@ -178,20 +188,16 @@ extern "C"
                 int32_t bytesRead = read(static_cast<int32_t>(deviceFd), &frame, sizeof(can_frame));
                 if (bytesRead < 0)
                 {
-                    // FIXME! improve this... add a callback to tell the outside world that this task has failed
+                    // something has gone wrong, log this and let the outside world know
                     //
-                    // note, as this task will now exit, signal the receiver queue handler to also stop
-                    //
-                    env->CallVoidMethod(running, setId, false);
-                    env->CallBooleanMethod(stopListener, setId, false);
-
                     std::stringstream errorMsg;
-                    errorMsg << "Error reading from CAN device, status: " << bytesRead;
+                    errorMsg << "Error reading from CAN device, status: " << errno;
                     env->CallVoidMethod(logger, errorId, env->NewStringUTF(errorMsg.str().c_str()));
 
-                    const std::string infoMsg = "Exiting native receiver task";
-                    env->CallVoidMethod(logger, infoId, env->NewStringUTF(infoMsg.c_str()));
-                    break;
+                    // the Java callback will set running to false, allowing this handler to exit
+                    //
+                    env->CallVoidMethod(self, errorCallbackId, errno);
+                    continue;
                 }
 
                 // create and queue a CanMessage instance
@@ -221,7 +227,7 @@ extern "C"
             env->ReleaseStringUTFChars(device, rawDevice);
 
             std::stringstream errMsg;
-            errMsg << "Unable to close the CAN socket associated with device " << cppDevice;
+            errMsg << "Unable to close the CAN socket associated with device " << cppDevice << ", native ERRNO: " << errno;
 
             const jclass jEx = env->FindClass("java/io/IOException");
             env->ThrowNew(jEx, errMsg.str().c_str());

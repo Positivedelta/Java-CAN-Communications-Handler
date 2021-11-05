@@ -30,10 +30,10 @@ JNIEXPORT void JNICALL Java_bitparallel_communication_CanCommsHandler_nativeTran
 /*
  * Class:     bitparallel_communication_CanCommsHandler
  * Method:    nativeReceiveTask
- * Signature: (Ljava/util/concurrent/LinkedBlockingQueue;Ljava/util/concurrent/atomic/AtomicBoolean;Ljava/util/concurrent/atomic/AtomicBoolean;J)V
+ * Signature: (Ljava/util/concurrent/LinkedBlockingQueue;Ljava/util/concurrent/atomic/AtomicBoolean;J)V
  */
 JNIEXPORT void JNICALL Java_bitparallel_communication_CanCommsHandler_nativeReceiveTask
-  (JNIEnv *, jobject, jobject, jobject, jobject, jlong);
+  (JNIEnv *, jobject, jobject, jobject, jlong);
 
 /*
  * Class:     bitparallel_communication_CanCommsHandler
