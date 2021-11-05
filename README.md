@@ -23,4 +23,5 @@ Notes,
   - In conjunction with `can-utils`,
     - e.g. Listen using `candump -L can0`
     - e.g. Transmit using `cansend can0 123#1122334455667788`
-  - See, https://github.com/linux-can/can-utils
+    - See, https://github.com/linux-can/can-utils
+  - Intended to provide a simple demonstration of the handler API
