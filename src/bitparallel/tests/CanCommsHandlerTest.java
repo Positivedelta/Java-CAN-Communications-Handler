@@ -23,7 +23,11 @@ public class CanCommsHandlerTest implements CanMessageListener, CanReadErrorList
     {
         logger.info("Listening on device: " + device);
 
+        // as an example of kernel based filtering you can add and instantiate them as follows
+        //
+//      final CanFilter[] filters = new CanFilter[] {new CanFilter(0xfff, 0x400), new CanFilter(0xfff, 0x410)};
         final CanFilter[] filters = new CanFilter[0];
+
         final CanCommsHandler handler = new CanCommsHandler(device, filters);
         handler.addMessageListener(this);
         handler.addReadErrorListener(this);
