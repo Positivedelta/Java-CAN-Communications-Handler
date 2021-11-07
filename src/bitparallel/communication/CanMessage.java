@@ -125,39 +125,39 @@ public class CanMessage
 
     public static String controllerErrorMessage(final int error)
     {
-        String message = String.format("0x02x", error) + " (Unexpected error code)"; 
+        String message = String.format("0x%02x", error) + " (Unexpected error code)"; 
         switch (error)
         {
             case CAN_ERR_CRTL_UNSPEC:
-                message = "Unspecified (" + String.format("0x02x", error);
+                message = "Unspecified (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_RX_OVERFLOW:
-                message = "RX Buffer overflow (" + String.format("0x02x", error);
+                message = "RX Buffer overflow (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_TX_OVERFLOW:
-                message = "TX Buffer overflow (" + String.format("0x02x", error);
+                message = "TX Buffer overflow (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_RX_WARNING:
-                message = "Reached RX warning threshold (" + String.format("0x02x", error);
+                message = "Reached RX warning threshold (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_TX_WARNING:
-                message = "Reached TX warning threshold (" + String.format("0x02x", error);
+                message = "Reached TX warning threshold (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_RX_PASSIVE:
-                message = "Reached RX passive threshold (" + String.format("0x02x", error);
+                message = "Reached RX passive threshold (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_TX_PASSIVE:
-                message = "Reached TX passive threshold (" + String.format("0x02x", error);
+                message = "Reached TX passive threshold (" + String.format("0x%02x", error);
                 break;
 
             case CAN_ERR_CRTL_ACTIVE:
-                message = "Recovered to error active state (" + String.format("0x02x", error);
+                message = "Recovered to error active state (" + String.format("0x%02x", error);
                 break;
         }
 
