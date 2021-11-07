@@ -46,7 +46,7 @@
                 <include name="bitparallel/communication/CanFilter.class"/>
                 <include name="bitparallel/communication/CanMessage.class"/>
                 <include name="bitparallel/communication/CanMessageListener.class"/>
-                <include name="bitparallel/communication/CanReadErrorListener.class"/>
+                <include name="bitparallel/communication/CanErrorListener.class"/>
             </fileset>
 
             <!-- file name="libcan_comms_handler_linux_arm32.so"/ -->
@@ -70,7 +70,7 @@
                 <include name="bitparallel/communication/CanFilter.class"/>
                 <include name="bitparallel/communication/CanMessage.class"/>
                 <include name="bitparallel/communication/CanMessageListener.class"/>
-                <include name="bitparallel/communication/CanReadErrorListener.class"/>
+                <include name="bitparallel/communication/CanErrorListener.class"/>
             </fileset>
 
             <!-- file name="libcan_comms_handler_linux_arm32.so"/ -->

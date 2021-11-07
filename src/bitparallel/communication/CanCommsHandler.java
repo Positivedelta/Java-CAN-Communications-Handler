@@ -58,7 +58,7 @@ public class CanCommsHandler
     private final Runnable rxNativeTask, rxListenerTask;
     private final LinkedBlockingQueue<CanMessage> receiverQueue;
     private final CopyOnWriteArrayList<CanMessageListener> canMessageListeners;
-    private final CopyOnWriteArrayList<CanReadErrorListener> canReadErrorListeners;
+    private final CopyOnWriteArrayList<CanErrorListener> canErrorListeners;
     private Thread rxNativeThread, rxListenerThread;
 
     public CanCommsHandler(final String device, final CanFilter[] filters) throws IOException
@@ -68,7 +68,7 @@ public class CanCommsHandler
         deviceFd = nativeOpen(device, filters);
 
         canMessageListeners = new CopyOnWriteArrayList<CanMessageListener>();
-        canReadErrorListeners = new CopyOnWriteArrayList<CanReadErrorListener>();
+        canErrorListeners = new CopyOnWriteArrayList<CanErrorListener>();
         receiverQueue = new LinkedBlockingQueue<CanMessage>(RECEIVER_MESSAGE_QUEUE_SIZE);
         rxNativeTaskRunning = new AtomicBoolean(false);
         rxListenerTaskRunning = new AtomicBoolean(false);
@@ -84,7 +84,7 @@ public class CanCommsHandler
         rxListenerThread = new Thread();
         rxListenerTask = () -> {
             logger.info("The CAN receiver listener task is running");
-            while(rxListenerTaskRunning.get())
+            while (rxListenerTaskRunning.get())
             {
                 // wait for a mesage and then transmit it to the subscribed listeners
                 //
@@ -93,16 +93,58 @@ public class CanCommsHandler
                     final CanMessage message = receiverQueue.poll(RECEIVER_QUEUE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                     if (message == null) continue;
 
-                    for (CanMessageListener listener : canMessageListeners)
+                    if (message.isDataFrame())
                     {
-                        try
+                        for (CanMessageListener listener : canMessageListeners)
                         {
-                            listener.rxedCanMessage(message);
+                            try
+                            {
+                                listener.rxedCanMessage(message);
+                            }
+                            catch (final Exception ex)
+                            {
+                                logger.error("Unexpected exception in CAN message listener, reason: " + ex.getMessage(), ex);
+                            }
                         }
-                        catch (final Exception ex)
+
+                        continue;
+                    }
+
+                    //
+                    // must be an error frame
+                    //
+
+                    if (message.isBusOffError())
+                    {
+                        for (CanErrorListener listener : canErrorListeners)
                         {
-                            logger.error("Unexpected exception in CAN listener, reason: " + ex.getMessage(), ex);
+                            try
+                            {
+                                listener.notifyBusOffError();
+                            }
+                            catch (final Exception ex)
+                            {
+                                logger.error("Unexpected exception in CAN bus-off error listener, reason: " + ex.getMessage(), ex);
+                            }
                         }
+                    }
+                    else if (message.isControllerError())
+                    {
+                        for (CanErrorListener listener : canErrorListeners)
+                        {
+                            try
+                            {
+                                listener.notifyControllerError(message.getPayload()[1]);
+                            }
+                            catch (final Exception ex)
+                            {
+                                logger.error("Unexpected exception in CAN controller error listener, reason: " + ex.getMessage(), ex);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        logger.error("Unexpected CAN error, frame id: " + message.getRawId());
                     }
                 }
                 catch (final InterruptedException ignored)
@@ -202,23 +244,27 @@ public class CanCommsHandler
         canMessageListeners.clear();
     }
 
-    public void addReadErrorListener(final CanReadErrorListener canReadErrorListener)
+    public void addErrorListener(final CanErrorListener canErrorListener)
     {
-        canReadErrorListeners.add(canReadErrorListener);
+        canErrorListeners.add(canErrorListener);
     }
 
-    public void removeReadErrorListener(final CanReadErrorListener canReadErrorListener)
+    public void removeErrorListener(final CanErrorListener canErrorListener)
     {
-        canReadErrorListeners.remove(canReadErrorListener);
+        canErrorListeners.remove(canErrorListener);
     }
 
-    public void clearReadErrorListeners()
+    public void clearErrorListeners()
     {
-        canReadErrorListeners.clear();
+        canErrorListeners.clear();
     }
 
+    // note, if this method name is changed, update the native handler accordingly
+    //
     private final void nativeReadErrorHandler(final int errorCode)
     {
+        logger.error("Error whilst reading from the native socketCAN file descriptor, error code: " + errorCode);
+
         // unable to read from the underlying socketCAN file descriptor
         // 1, allow the native thread to exit
         // 2, allow the queued message receiver thread to exit
@@ -229,15 +275,14 @@ public class CanCommsHandler
         logger.warn("The native and receiver queue threads have been signalled to exit");
 
         // note, this method is called from within the native receiver thread
-        // so it mustn't block whilst notifying the registered error listeners
+        // so it mustn't block whilst notifying the registered error listeners as it needs to exit
         //
-        final IOException error = new IOException("Error whilst reading from the socketCAN file descriptor, reason: " + errorCode);
         final Runnable notifyTask = () -> {
-            for (CanReadErrorListener listener : canReadErrorListeners)
+            for (CanErrorListener listener : canErrorListeners)
             {
                 try
                 {
-                    listener.notifyReadError(error);
+                    listener.notifyNativeReadError(errorCode);
                 }
                 catch (final Exception ex)
                 {

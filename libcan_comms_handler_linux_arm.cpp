@@ -3,6 +3,7 @@
 //
 
 #include <linux/can/raw.h>
+#include <linux/can/error.h>
 #include <net/if.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -71,6 +72,21 @@ extern "C"
         {
             std::stringstream errMsg;
             errMsg << "Unable to bind the CAN socket to device " << cppDevice << ", native ERRNO: " << errno;
+
+            const jclass jEx = env->FindClass("java/io/IOException");
+            env->ThrowNew(jEx, errMsg.str().c_str());
+            return -1;
+        }
+
+        // FIXME! is this needed? i.e. is everything on by default?
+        // enable bus-off and controller errors
+        //
+        can_err_mask_t errorMask = CAN_ERR_CRTL | CAN_ERR_BUSOFF;
+//      can_err_mask_t errorMask = CAN_ERR_MASK; //CAN_ERR_CRTL | CAN_ERR_BUSOFF;
+        if (setsockopt(static_cast<int32_t>(deviceFd), SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorMask, sizeof(errorMask)) < 0)
+        {
+            std::stringstream errMsg;
+            errMsg << "Unable to apply the CAN socket error filters to device " << cppDevice << ", native ERRNO: " << errno;
 
             const jclass jEx = env->FindClass("java/io/IOException");
             env->ThrowNew(jEx, errMsg.str().c_str());

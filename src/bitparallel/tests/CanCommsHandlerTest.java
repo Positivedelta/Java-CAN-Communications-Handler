@@ -13,9 +13,9 @@ import bitparallel.communication.CanCommsHandler;
 import bitparallel.communication.CanFilter;
 import bitparallel.communication.CanMessage;
 import bitparallel.communication.CanMessageListener;
-import bitparallel.communication.CanReadErrorListener;
+import bitparallel.communication.CanErrorListener;
 
-public class CanCommsHandlerTest implements CanMessageListener, CanReadErrorListener
+public class CanCommsHandlerTest implements CanMessageListener, CanErrorListener
 {
     private static final Logger logger = LogManager.getLogger(CanCommsHandlerTest.class);
 
@@ -30,15 +30,29 @@ public class CanCommsHandlerTest implements CanMessageListener, CanReadErrorList
 
         final CanCommsHandler handler = new CanCommsHandler(device, filters);
         handler.addMessageListener(this);
-        handler.addReadErrorListener(this);
+        handler.addErrorListener(this);
         handler.start();
 
         // notes 1, when testing with a linux client consider using "candump -L can0" or equivelent to see this message
         //       2, transmit() throws an IOException if it fails, if this happens it is likely that the handler will need restarting
         //
-        final CanMessage message = new CanMessage(0x200, new byte[] {(byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6, (byte)7, (byte)8});
-        handler.transmit(message);
+        logger.info("Transmitting test messages...");
+        final CanMessage message = new CanMessage(0x100, new byte[] {(byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6, (byte)7, (byte)8});
+        for (int i = 0; i < 3000; i++)
+        {
+            try
+            {
+                handler.transmit(message);
+                Thread.sleep(10);
+            }
+            catch (final InterruptedException ignored)
+            {
+            }
+        }
 
+        handler.stop();
+
+/*      logger.info("Receiving test messages...");
         final Thread t = new Thread(() -> {
             try
             {
@@ -50,7 +64,7 @@ public class CanCommsHandlerTest implements CanMessageListener, CanReadErrorList
             }
         });
 
-        t.start();
+        t.start(); */
     }
 
     //
@@ -66,13 +80,22 @@ public class CanCommsHandlerTest implements CanMessageListener, CanReadErrorList
     // method required by the CanErrorListener interface
     //
 
-    public final void notifyReadError(final Exception ex)
+    public final void notifyNativeReadError(final int error)
     {
         // notes 1, this method is intended be used to stop and restart the handler
         //       2, the native and java threads associated with the async reads will have been signalled to exit
         //
-        logger.error("The CAN bus handler has reported a native read exception");
-        logger.error(ex.getMessage());
+        logger.error("The CAN bus handler has reported a native read exception, error code: " + error);
+    }
+
+    public final void notifyBusOffError()
+    {
+        logger.error("The CAN bus controller has reported a BUS-OFF error");
+    }
+
+    public final void notifyControllerError(final int error)
+    {
+        logger.error("The CAN bus controller has reported an error: " + CanMessage.controllerErrorMessage(error));
     }
 
     public static final void main(String[] args)
