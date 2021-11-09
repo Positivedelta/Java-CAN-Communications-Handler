@@ -28,17 +28,25 @@ public class CanMessage
     public static final int CAN_ERR_FLAG = 0x20000000;                  // error message frame */
 
     //
-    // defined in can/error.h, CAN controller error status - data[1]
+    // defined in can/error.h, CAN controller error status - data[1], data[2]
     //
 
     public static final int CAN_ERR_CRTL = 0x00000004;                  // controller problems - data[1]
+    public static final int CAN_ERR_PROT = 0x00000008;                  // can protocol errors and notifications - data[2]
     public static final int CAN_ERR_BUSOFF = 0x00000040;                // bus off
+    public static final int CAN_ERR_RESTARTED = 0x00000100;             // controller restarted
 
+    // data[1] bits
+    //
     public static final byte CAN_ERR_CRTL_UNSPEC = (byte)0x00;          // unspecified
     public static final byte CAN_ERR_CRTL_RX_OVERFLOW = (byte)0x01;     // RX buffer overflow
     public static final byte CAN_ERR_CRTL_TX_OVERFLOW = (byte)0x02;     // TX buffer overflow
     public static final byte CAN_ERR_CRTL_RX_WARNING = (byte)0x04;      // reached warning level for RX errors
     public static final byte CAN_ERR_CRTL_TX_WARNING = (byte)0x08;      // reached warning level for TX errors
+
+    // data[2] bits
+    //
+    public static final byte CAN_ERR_PROT_ACTIVE = (byte)0x40;          // can active error state announcement
 
     // passive error status, at least one error counter exceeds the protocol-defined level of 127
     //
@@ -115,6 +123,16 @@ public class CanMessage
         return (getId() & CAN_ERR_CRTL) != 0;
     }
 
+    public final boolean isControllerRestarted()
+    {
+        return (getId() & CAN_ERR_RESTARTED) != 0;
+    }
+
+    public final boolean isProtocolError()
+    {
+        return (getId() & CAN_ERR_PROT) != 0;
+    }
+
     // intended to save time and complexity by letting a CAN controller store a pre-formatted message and send it
     // immediately on request, potentailly without any microcontroller involvement (if the harware supports it)
     //
@@ -129,35 +147,48 @@ public class CanMessage
         switch (error)
         {
             case CAN_ERR_CRTL_UNSPEC:
-                message = "Unspecified (" + String.format("0x%02x", error);
+                message = "Unspecified [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_RX_OVERFLOW:
-                message = "RX Buffer overflow (" + String.format("0x%02x", error);
+                message = "RX Buffer overflow [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_TX_OVERFLOW:
-                message = "TX Buffer overflow (" + String.format("0x%02x", error);
+                message = "TX Buffer overflow [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_RX_WARNING:
-                message = "Reached RX warning threshold (" + String.format("0x%02x", error);
+                message = "Reached RX warning threshold [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_TX_WARNING:
-                message = "Reached TX warning threshold (" + String.format("0x%02x", error);
+                message = "Reached TX warning threshold [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_RX_PASSIVE:
-                message = "Reached RX passive threshold (" + String.format("0x%02x", error);
+                message = "Reached RX passive threshold [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_TX_PASSIVE:
-                message = "Reached TX passive threshold (" + String.format("0x%02x", error);
+                message = "Reached TX passive threshold [" + String.format("0x%02x]", error);
                 break;
 
             case CAN_ERR_CRTL_ACTIVE:
-                message = "Recovered to error active state (" + String.format("0x%02x", error);
+                message = "Recovered to error active state [" + String.format("0x%02x]", error);
+                break;
+        }
+
+        return message;
+    }
+
+    public static String protocolErrorMessage(final int error)
+    {
+        String message = String.format("0x%02x", error) + " (Unexpected error code)"; 
+        switch (error)
+        {
+            case CAN_ERR_PROT_ACTIVE:
+                message = "Active error state announcement [" + String.format("0x%02x]", error);
                 break;
         }
 

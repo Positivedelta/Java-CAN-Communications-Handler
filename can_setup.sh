@@ -5,6 +5,9 @@
 # cansend can1 100#1122334455667788
 # cangen can1 -g 10 -n 1000 -I 100 -D 11223344DEADBEEF -L 8
 #
+# ifconfig
+# ip -details -statistics link show can0
+#
 
 sudo rmmod mcp251x.ko
 sudo insmod ../dual_mcp251x_driver/mcp251x.ko device=can0 mode1=1,1 mask1=0xfff,0xfff filt1=0x100,0x101,0x102,0x103,0x104,0x105

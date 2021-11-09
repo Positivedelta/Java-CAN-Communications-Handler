@@ -81,8 +81,7 @@ extern "C"
         // FIXME! is this needed? i.e. is everything on by default?
         // enable bus-off and controller errors
         //
-        can_err_mask_t errorMask = CAN_ERR_CRTL | CAN_ERR_BUSOFF;
-//      can_err_mask_t errorMask = CAN_ERR_MASK; //CAN_ERR_CRTL | CAN_ERR_BUSOFF;
+        can_err_mask_t errorMask = CAN_ERR_RESTARTED | CAN_ERR_CRTL | CAN_ERR_PROT | CAN_ERR_BUSOFF;
         if (setsockopt(static_cast<int32_t>(deviceFd), SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorMask, sizeof(errorMask)) < 0)
         {
             std::stringstream errMsg;

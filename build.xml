@@ -42,11 +42,11 @@
     <target name="do-jar">
         <jar jarfile="${dist}/${jarname-no-log4j}">
             <fileset dir="${build}">
-                <include name="bitparallel/communication/CanCommsHandler.class"/>
+                <include name="bitparallel/communication/CanCommsHandler*.class"/>
                 <include name="bitparallel/communication/CanFilter.class"/>
                 <include name="bitparallel/communication/CanMessage.class"/>
                 <include name="bitparallel/communication/CanMessageListener.class"/>
-                <include name="bitparallel/communication/CanErrorListener.class"/>
+                <include name="bitparallel/communication/CanNotificationListener.class"/>
             </fileset>
 
             <!-- file name="libcan_comms_handler_linux_arm32.so"/ -->
@@ -66,11 +66,11 @@
     <target name="do-jar-log4j">
         <jar jarfile="${dist}/${jarname-with-log4j}">
             <fileset dir="${build}">
-                <include name="bitparallel/communication/CanCommsHandler.class"/>
+                <include name="bitparallel/communication/CanCommsHandler*.class"/>
                 <include name="bitparallel/communication/CanFilter.class"/>
                 <include name="bitparallel/communication/CanMessage.class"/>
                 <include name="bitparallel/communication/CanMessageListener.class"/>
-                <include name="bitparallel/communication/CanErrorListener.class"/>
+                <include name="bitparallel/communication/CanNotificationListener.class"/>
             </fileset>
 
             <!-- file name="libcan_comms_handler_linux_arm32.so"/ -->
