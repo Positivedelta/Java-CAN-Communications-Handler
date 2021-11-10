@@ -56,15 +56,18 @@ public class CanCommsHandler
     //
     interface NotificationWrapper
     {
-        default void notify(final CanNotificationListener listener, final String detail)
+        default void notify(final CopyOnWriteArrayList<CanNotificationListener> listeners, final String detail)
         {
-            try
+            for (CanNotificationListener listener : listeners)
             {
-                notifyThrows(listener);
-            }
-            catch (final Exception ex)
-            {
-                logger.error("Unexpected exception in CAN " + detail + " error listener, reason: " + ex.getMessage(), ex);
+                try
+                {
+                    notifyThrows(listener);
+                }
+                catch (final Exception ex)
+                {
+                    logger.error("Unexpected exception in CAN " + detail + " error listener, reason: " + ex.getMessage(), ex);
+                }
             }
         }
 
@@ -136,22 +139,22 @@ public class CanCommsHandler
                     if (message.isBusOffError())
                     {
                         final NotificationWrapper busError = (listener) -> listener.notifyBusOffError();
-                        notifyListeners(busError, "bus-off");
+                        busError.notify(canNotificationListeners, "bus-off");
                     }
                     else if (message.isControllerError())
                     {
                         final NotificationWrapper controllerError = (listener) -> listener.notifyControllerError(message.getPayload()[1]);
-                        notifyListeners(controllerError, "controller");
+                        controllerError.notify(canNotificationListeners, "controller");
                     }
                     else if (message.isProtocolError())
                     {
                         final NotificationWrapper protocolError = (listener) -> listener.notifyProtocolError(message.getPayload()[2]);
-                        notifyListeners(protocolError, "protocol");
+                        protocolError.notify(canNotificationListeners, "protocol");
                     }
                     else if (message.isControllerRestarted())
                     {
                         final NotificationWrapper controllerRestarted = (listener) -> listener.notifyControllerRestarted();
-                        notifyListeners(controllerRestarted, "controller restarted");
+                        controllerRestarted.notify(canNotificationListeners, "controller restarted");
                     }
                     else
                     {
@@ -163,14 +166,6 @@ public class CanCommsHandler
                 }
             }
         };
-    }
-
-    private void notifyListeners(final NotificationWrapper wrapper, final String detail)
-    {
-        for (CanNotificationListener listener : canNotificationListeners)
-        {
-            wrapper.notify(listener, detail);
-        }
     }
 
     private native long nativeOpen(final String device, final CanFilter[] filters) throws IOException;
@@ -305,7 +300,7 @@ public class CanCommsHandler
                 }
                 catch (final Exception ex)
                 {
-                    logger.error("Unexpected exception whilst notifying a CanNotificationReadListener, reason: " + ex.getMessage(), ex);
+                    logger.error("Unexpected exception whilst notifying a CAN native read listener, reason: " + ex.getMessage(), ex);
                 }
             }
         };
