@@ -54,7 +54,7 @@ public class CanCommsHandler
 
     // functional interface used to help compact the error listener handling code
     //
-    interface NotificationWrapper
+    interface NotificationHandler
     {
         default void notify(final CopyOnWriteArrayList<CanNotificationListener> listeners, final String detail)
         {
@@ -138,22 +138,22 @@ public class CanCommsHandler
 
                     if (message.isBusOffError())
                     {
-                        final NotificationWrapper busError = (listener) -> listener.notifyBusOffError();
+                        final NotificationHandler busError = (listener) -> listener.notifyBusOffError();
                         busError.notify(canNotificationListeners, "bus-off");
                     }
                     else if (message.isControllerError())
                     {
-                        final NotificationWrapper controllerError = (listener) -> listener.notifyControllerError(message.getPayload()[1]);
+                        final NotificationHandler controllerError = (listener) -> listener.notifyControllerError(message.getPayload()[1]);
                         controllerError.notify(canNotificationListeners, "controller");
                     }
                     else if (message.isProtocolError())
                     {
-                        final NotificationWrapper protocolError = (listener) -> listener.notifyProtocolError(message.getPayload()[2]);
+                        final NotificationHandler protocolError = (listener) -> listener.notifyProtocolError(message.getPayload()[2]);
                         protocolError.notify(canNotificationListeners, "protocol");
                     }
                     else if (message.isControllerRestarted())
                     {
-                        final NotificationWrapper controllerRestarted = (listener) -> listener.notifyControllerRestarted();
+                        final NotificationHandler controllerRestarted = (listener) -> listener.notifyControllerRestarted();
                         controllerRestarted.notify(canNotificationListeners, "controller restarted");
                     }
                     else
